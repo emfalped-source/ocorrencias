@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ocorrências EMFAL</title>
+<meta name="theme-color" content="#1f5f52">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{color-scheme:light}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+
+/* Layout: caderno de registro da coordenação. Barra superior fixa com abas, coluna única de formulário, histórico em fichas com faixa de gravidade. */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --surface-2:#e8eceb; --line:#cfd6d4;
+  --ink:#16302b; --muted:#56695f; --accent:#1f5f52; --accent-ink:#ffffff; --ochre:#b7802a;
+  --leve:#3d7a5a; --media:#b7802a; --grave:#b2402f;
+  --leve-bg:#e2efe7; --media-bg:#f6ead6; --grave-bg:#f6e0dc;
+  --focus:#2b7fff;
+  --f-display:"Zilla Slab", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1715; --surface:#16211e; --surface-2:#1d2a27; --line:#2d3d39;
+  --ink:#e3ece8; --muted:#9aaea6; --accent:#5fb39f; --accent-ink:#0b1412; --ochre:#d9a24f;
+  --leve:#6fbf93; --media:#d9a24f; --grave:#e4705d;
+  --leve-bg:#1a2f25; --media-bg:#33281a; --grave-bg:#3a1f1a; --focus:#7fb2ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1715; --surface:#16211e; --surface-2:#1d2a27; --line:#2d3d39;
+  --ink:#e3ece8; --muted:#9aaea6; --accent:#5fb39f; --accent-ink:#0b1412; --ochre:#d9a24f;
+  --leve:#6fbf93; --media:#d9a24f; --grave:#e4705d;
+  --leve-bg:#1a2f25; --media-bg:#33281a; --grave-bg:#3a1f1a; --focus:#7fb2ff; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--accent);color:var(--accent-ink)}
+header.top .wrap{padding-block:14px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:1.45rem;margin:0;letter-spacing:.01em;text-wrap:balance}
+.brand small{font-family:var(--f-mono);font-size:.72rem;opacity:.85;letter-spacing:.04em;text-transform:uppercase}
+nav.tabs{display:flex;gap:2px;overflow-x:auto}
+nav.tabs button{appearance:none;border:0;background:transparent;color:inherit;font:600 .9rem var(--f-body);padding:10px 14px;border-radius:8px 8px 0 0;opacity:.8;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
+nav.tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+main .wrap{padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+
+.banner{border:1px solid var(--line);background:var(--surface-2);padding:10px 14px;border-radius:8px;font-size:.88rem;color:var(--muted)}
+.banner.warn{border-color:var(--media);background:var(--media-bg);color:var(--ink)}
+
+form{display:flex;flex-direction:column;gap:18px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+legend{font-family:var(--f-display);font-weight:600;font-size:1.1rem;padding:0;margin-bottom:10px;color:var(--accent)}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+label.f span,.lbl{font-size:.74rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 11px;width:100%;min-width:0}
+textarea{min-height:130px;resize:vertical;line-height:1.55}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
+.hint{font-size:.8rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span{display:inline-block;border:1px solid var(--line);background:var(--bg);padding:7px 12px;border-radius:999px;font-size:.86rem;cursor:pointer;user-select:none}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.sev .chip input[value=leve]:checked+span{background:var(--leve);border-color:var(--leve)}
+.sev .chip input[value=media]:checked+span{background:var(--media);border-color:var(--media)}
+.sev .chip input[value=grave]:checked+span{background:var(--grave);border-color:var(--grave)}
+.sev .chip input:checked+span{color:#fff}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;font:600 .92rem var(--f-body);border-radius:8px;padding:10px 16px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--grave);border-color:var(--grave)}
+.btn.small{padding:6px 11px;font-size:.82rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.status-msg{font-size:.88rem;color:var(--muted)}
+
+/* Documento */
+.doc{background:#fff;color:#111;border:1px solid var(--line);border-radius:4px;padding:28px 26px;font-family:Calibri,Carlito,"Public Sans",sans-serif;font-size:14px;line-height:1.55}
+.doc .head{text-align:center;font-weight:700;font-size:12px;line-height:1.45;letter-spacing:.02em}
+.doc h2{text-align:center;font-size:15px;margin:18px 0 14px;letter-spacing:.06em}
+.doc p{text-align:justify;margin:0 0 10px;hyphens:auto}
+.doc .sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:26px 22px;margin-top:38px}
+.doc .sig{border-top:1px solid #111;padding-top:4px;font-size:12px;text-align:center}
+.doc-wrap{display:flex;flex-direction:column;gap:12px}
+
+/* Histórico */
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+@media (max-width:560px){.filters{grid-template-columns:1fr 1fr}.filters label:first-child{grid-column:1/-1}}
+.summary{display:flex;gap:10px;flex-wrap:wrap;font-size:.88rem;color:var(--muted)}
+.summary b{font-family:var(--f-mono);font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{display:grid;grid-template-columns:5px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.card .stripe{background:var(--line)}
+.card.leve .stripe{background:var(--leve)} .card.media .stripe{background:var(--media)} .card.grave .stripe{background:var(--grave)}
+.card .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card .row1{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.card .who{font-weight:700;font-size:1rem}
+.card .meta{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .rel{font-size:.9rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink);letter-spacing:.02em}
+.pill.st-aberta{background:var(--grave-bg);color:var(--grave)}
+.pill.st-familia{background:var(--media-bg);color:var(--media)}
+.pill.st-encerrada{background:var(--leve-bg);color:var(--leve)}
+.pill.rein{background:var(--grave-bg);color:var(--grave)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+
+.empty{border:1px dashed var(--line);border-radius:10px;padding:26px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:center}
+.empty strong{font-family:var(--f-display);font-size:1.15rem;color:var(--ink)}
+
+/* Estudantes */
+table.rank{width:100%;border-collapse:collapse;font-size:.9rem}
+table.rank th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+table.rank td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.rank td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+table.rank tr:hover td{background:var(--surface-2)}
+.tscroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.linkish{appearance:none;background:none;border:0;padding:0;font:inherit;color:var(--accent);font-weight:600;cursor:pointer;text-align:left}
+
+.confirm{border:1px solid var(--grave);background:var(--grave-bg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;z-index:20;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+
+.login{max-width:380px;margin:40px auto;display:flex;flex-direction:column;gap:14px}
+.login h2{font-family:var(--f-display);margin:0;font-size:1.4rem}
+.erro{color:var(--grave);font-size:.9rem;min-height:1.2em}
+.top-user{display:flex;gap:10px;align-items:center;font-size:.82rem}
+.top-user button{appearance:none;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:3px 9px;font:inherit;cursor:pointer;opacity:.9}
+.pick{display:flex;flex-direction:column;gap:8px}
+.pick-list{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.pick-list label{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:.92rem}
+.pick-list label:last-child{border-bottom:0}
+.pick-list input{width:18px;height:18px;accent-color:var(--accent)}
+.selected{display:flex;flex-wrap:wrap;gap:6px}
+.selected .pill button{appearance:none;border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0 0 0 6px}
+.carga{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:30}
+.carga div{background:var(--surface);color:var(--ink);padding:14px 20px;border-radius:10px;font-size:.95rem;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+@media print{
+  @page{size:A4;margin:2cm}
+  body{background:#fff}
+  header.top,body::before,.no-print,#conn,.toast{display:none!important}
+  main .wrap{padding:0;max-width:none}
+  .doc{border:0;padding:0;font-size:12pt}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Ocorrências EMFAL</h1>
+      <div class="top-user" id="topUser"></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Seções" id="tabs" hidden>
+      <button role="tab" id="tab-novo" aria-selected="true" data-view="novo">Novo registro</button>
+      <button role="tab" id="tab-hist" aria-selected="false" data-view="hist">Histórico</button>
+      <button role="tab" id="tab-est" aria-selected="false" data-view="est">Por estudante</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div id="conn" class="banner" hidden></div>
+
+    <!-- LOGIN -->
+    <section id="view-login" hidden>
+      <form class="login sheet" id="loginForm" novalidate>
+        <h2>Entrar</h2>
+        <p class="hint" style="margin:0">Use o mesmo usuário e senha do Corretor EMFAL. O acesso é só para a coordenação.</p>
+        <label class="f"><span>Usuário</span><input type="text" id="lUsu" autocomplete="username" autocapitalize="none"></label>
+        <label class="f"><span>Senha</span><input type="password" id="lSen" autocomplete="current-password"></label>
+        <div class="erro" id="lErro" role="alert"></div>
+        <button type="submit" class="btn primary">Entrar</button>
+      </form>
+    </section>
+
+    <!-- NOVO -->
+    <section id="view-novo" hidden>
+      <form id="form" novalidate>
+        <div class="sheet"><fieldset>
+          <legend id="form-title">Dados da ocorrência</legend>
+          <div class="grid">
+            <label class="f"><span>Data</span><input type="date" id="f-data" required></label>
+            <label class="f"><span>Horário</span>
+              <select id="f-horario">
+                <option>Entrada</option><option>1º horário</option><option>2º horário</option><option>3º horário</option>
+                <option>Recreio</option><option>4º horário</option><option>5º horário</option><option>Saída</option>
+              </select></label>
+            <label class="f"><span>Turma</span><select id="f-turma"></select></label>
+          </div>
+          <div class="pick">
+            <div class="lbl">Estudante(s) envolvido(s)</div>
+            <div class="selected" id="selEst"></div>
+            <input type="text" id="f-busca" placeholder="Filtrar pelo nome" autocomplete="off">
+            <div class="pick-list" id="pickList"></div>
+            <p class="hint" style="margin:0">Para incluir estudantes de outra turma, troque a turma e marque os nomes. Os já marcados continuam no registro.</p>
+          </div>
+          <div class="grid">
+            <label class="f"><span>Tipo</span>
+              <select id="f-tipo">
+                <option>Indisciplina em sala de aula</option>
+                <option>Desrespeito a professor ou funcionário</option>
+                <option>Agressão verbal entre estudantes</option>
+                <option>Agressão física entre estudantes</option>
+                <option>Bullying ou intimidação</option>
+                <option>Dano ao patrimônio escolar</option>
+                <option>Uso indevido de celular</option>
+                <option>Saída de sala sem autorização</option>
+                <option>Recusa em realizar as atividades</option>
+                <option>Outro</option>
+              </select></label>
+            <label class="f"><span>Local</span>
+              <select id="f-local">
+                <option>sala de aula</option><option>corredor</option><option>pátio</option><option>quadra</option>
+                <option>refeitório</option><option>banheiro</option><option>portaria</option><option>biblioteca</option><option>outro local</option>
+              </select></label>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:8px">Gravidade</div>
+            <div class="chips sev" role="radiogroup" aria-label="Gravidade">
+              <label class="chip"><input type="radio" name="grav" value="leve" checked><span>Leve</span></label>
+              <label class="chip"><input type="radio" name="grav" value="media"><span>Média</span></label>
+              <label class="chip"><input type="radio" name="grav" value="grave"><span>Grave</span></label>
+            </div>
+          </div>
+        </fieldset></div>
+
+        <div class="sheet"><fieldset>
+          <legend>Relato</legend>
+          <label class="f"><span>Quem relatou</span><input type="text" id="f-relator" placeholder="Ex.: professora de Língua Portuguesa"></label>
+          <label class="f"><span>O que aconteceu</span>
+            <textarea id="f-relato" placeholder="Descreva os fatos em ordem, de forma objetiva."></textarea></label>
+          <p class="hint">Escreva só os fatos. O app monta o texto oficial em parágrafo corrido.</p>
+        </fieldset></div>
+
+        <div class="sheet"><fieldset>
+          <legend>Providências</legend>
+          <div class="chips" id="prov">
+            <label class="chip"><input type="checkbox" value="conversa individual com o estudante"><span>Conversa com o estudante</span></label>
+            <label class="chip"><input type="checkbox" value="advertência verbal"><span>Advertência verbal</span></label>
+            <label class="chip"><input type="checkbox" value="advertência escrita"><span>Advertência escrita</span></label>
+            <label class="chip"><input type="checkbox" value="contato telefônico com a família"><span>Contato com a família</span></label>
+            <label class="chip"><input type="checkbox" value="convocação do responsável para comparecer à escola"><span>Convocar responsável</span></label>
+            <label class="chip"><input type="checkbox" value="mediação de conflito entre os envolvidos"><span>Mediação de conflito</span></label>
+            <label class="chip"><input type="checkbox" value="encaminhamento à direção"><span>Encaminhar à direção</span></label>
+            <label class="chip"><input type="checkbox" value="encaminhamento à rede de proteção"><span>Rede de proteção</span></label>
+          </div>
+          <label class="f"><span>Outras providências (opcional)</span><input type="text" id="f-outras" placeholder="Ex.: troca de lugar na sala"></label>
+          <div class="grid">
+            <label class="f"><span>Registrado por</span><input type="text" id="f-registrador"></label>
+            <label class="f"><span>Situação</span>
+              <select id="f-status">
+                <option value="aberta">Aberta</option>
+                <option value="familia">Família contatada</option>
+                <option value="encerrada">Encerrada</option>
+              </select></label>
+          </div>
+        </fieldset></div>
+
+        <div class="actions">
+          <button type="submit" class="btn primary" id="btn-salvar">Salvar registro</button>
+          <button type="button" class="btn" id="btn-preview">Ver texto oficial</button>
+          <button type="button" class="btn" id="btn-limpar">Limpar</button>
+          <span class="status-msg" id="form-msg" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- DOCUMENTO -->
+    <section id="view-doc" hidden>
+      <div class="doc-wrap">
+        <div class="actions no-print">
+          <button class="btn" id="btn-voltar" type="button">Voltar</button>
+          <button class="btn primary" id="btn-imprimir" type="button">Imprimir</button>
+          <button class="btn" id="btn-baixar" type="button">Baixar para Word</button>
+          <button class="btn" id="btn-copiar" type="button">Copiar texto</button>
+        </div>
+        <div class="doc" id="doc"></div>
+      </div>
+    </section>
+
+    <!-- HISTÓRICO -->
+    <section id="view-hist" hidden>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="filters">
+          <label class="f"><span>Buscar</span><input type="text" id="q" placeholder="Nome, turma ou palavra do relato"></label>
+          <label class="f"><span>Situação</span>
+            <select id="q-status"><option value="">Todas</option><option value="aberta">Aberta</option><option value="familia">Família contatada</option><option value="encerrada">Encerrada</option></select></label>
+          <label class="f"><span>Gravidade</span>
+            <select id="q-grav"><option value="">Todas</option><option value="leve">Leve</option><option value="media">Média</option><option value="grave">Grave</option></select></label>
+        </div>
+        <div class="summary" id="summary"></div>
+        <div class="list" id="list"></div>
+      </div>
+    </section>
+
+    <!-- ESTUDANTES -->
+    <section id="view-est" hidden>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <p class="hint" style="margin:0">Estudantes com três ou mais registros aparecem marcados como reincidentes.</p>
+        <div id="rank"></div>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="carga" id="carga" hidden><div id="cargaMsg">Carregando…</div></div>
+
+<script>
+'use strict';
+var API_URL = 'https://script.google.com/macros/s/AKfycbxIpFtb_w_yUXQ7pixFZsoAJDxPT9jnye2mW7JvxCoLhpxWx-swCn_HkLrxPrZxbh4qEQ/exec';
+var SEM_TOKEN = ['entrar', 'sair', 'situacao'];
+var CHAVE = 'ocorrencias_sessao';
+var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+var STATUS = { aberta: 'Aberta', familia: 'Família contatada', encerrada: 'Encerrada' };
+var GRAV = { leve: 'Leve', media: 'Média', grave: 'Grave' };
+var HEADER = ['PREFEITURA MUNICIPAL DE BELO HORIZONTE','SECRETARIA MUNICIPAL DE EDUCAÇÃO (SMED-BH)','GERÊNCIA REGIONAL DE EDUCAÇÃO DA PAMPULHA (GERED-PAMPULHA)','ESCOLA MUNICIPAL FRANCISCA ALVES (EMFAL)'];
+
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function todayISO() { var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+function fmtShort(iso) { if (!iso) return ''; var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function fmtLong(iso) { if (!iso) return ''; var p = iso.split('-').map(Number); return p[2] + ' de ' + MESES[p[1] - 1] + ' de ' + p[0]; }
+function cleanDash(s) { return String(s || '').replace(/\s*[\u2013\u2014]\s*/g, ', ').replace(/\s+/g, ' ').trim(); }
+function joinPt(a) { return a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1]; }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2800); }
+function carga(on, msg) { $('#carga').hidden = !on; if (msg) $('#cargaMsg').textContent = msg; }
+
+// Turma: mostra "7º A" quando o código segue o padrão FRC (ciclo + ano + turno + letra)
+function turmaNome(t) {
+  var m = /^FRC(IA|PA|AA)(\d)([MT])([A-Z])$/.exec(String(t || '').toUpperCase());
+  if (!m) return String(t || '');
+  var ano = { IA: 0, PA: 3, AA: 6 }[m[1]] + Number(m[2]);
+  return ano + 'º ' + m[4];
+}
+function turmaRotulo(t) { var n = turmaNome(t); return n && n !== t ? n + ' (' + t + ')' : t; }
+
+// ---------- servidor ----------
+var SESS = null;
+try { SESS = JSON.parse(lsGet(CHAVE) || 'null'); } catch (e) { SESS = null; }
+function api(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (SEM_TOKEN.indexOf(fn) < 0) args.unshift(SESS ? SESS.token : '');
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow' })
+    .catch(function () { throw new Error('Sem conexão com a internet. Confira e tente de novo.'); })
+    .then(function (r) { if (!r.ok) throw new Error('O servidor não respondeu (erro ' + r.status + '). Tente de novo.'); return r.json(); })
+    .then(function (j) {
+      if (j && j.ok) return j.res;
+      var m = String((j && j.erro) || 'Erro desconhecido.').replace(/^Error: /, '');
+      if (/^SESSAO:/.test(m)) { sairLocal(); m = m.replace(/^SESSAO: ?/, ''); }
+      m = m.replace(/^TROCAR: ?/, '');
+      throw new Error(m);
+    });
+}
+function chamar(msg) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  carga(true, msg);
+  return api.apply(null, args).then(function (r) { carga(false); return r; }, function (e) { carga(false); throw e; });
+}
+
+// ---------- estado ----------
+var ESTUD = [];          // [{id,nome,turma}] vindos do Corretor
+var ESTPOR = {};         // id -> estudante
+var TURMAS = [];
+var records = [];
+var editingId = null, docRecord = null, docReturn = 'novo', pendingDelete = null;
+var sel = [];            // [{id,nome,turma}] marcados no formulário
+var view = 'novo';
+
+function setDados(d) {
+  if (d.estudantes) {
+    ESTUD = d.estudantes.slice().sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+    ESTPOR = {}; var t = {};
+    ESTUD.forEach(function (e) { ESTPOR[e.id] = e; t[e.turma] = 1; });
+    TURMAS = Object.keys(t).sort(function (a, b) { return turmaNome(a).localeCompare(turmaNome(b), 'pt-BR', { numeric: true }); });
+    $('#f-turma').innerHTML = '<option value="">Escolha a turma</option>' + TURMAS.map(function (x) { return '<option value="' + esc(x) + '">' + esc(turmaRotulo(x)) + '</option>'; }).join('');
+  }
+  if (d.ocorrencias) {
+    records = d.ocorrencias.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || '') || (b.criadoEm || '').localeCompare(a.criadoEm || ''); });
+  }
+}
+
+// ---------- texto oficial ----------
+function dataExtenso(iso) {
+  if (!iso) return 'Na data de hoje';
+  var p = iso.split('-').map(Number);
+  return (p[2] === 1 ? 'Ao primeiro dia' : 'Aos ' + p[2] + ' dias') + ' do mês de ' + MESES[p[1] - 1] + ' de ' + p[0];
+}
+function momento(h) {
+  if (h === 'Entrada') return 'no horário de entrada';
+  if (h === 'Saída') return 'no horário de saída';
+  if (h === 'Recreio') return 'durante o recreio';
+  return 'durante o ' + h;
+}
+function envolvidos(r) {
+  var ids = r.estudanteIds || [];
+  var nomes = String(r.estudantes || '').split(/\s*;\s*/).filter(Boolean);
+  return nomes.map(function (n, i) { var e = ESTPOR[ids[i]]; return { nome: n, turma: e ? e.turma : (r.turma || '') }; });
+}
+function buildParagraphs(r) {
+  var env = envolvidos(r);
+  var turmas = {}; env.forEach(function (e) { if (e.turma) turmas[e.turma] = 1; });
+  var tl = Object.keys(turmas).map(turmaNome);
+  var quem;
+  if (env.length > 1) {
+    quem = 'os estudantes ' + joinPt(env.map(function (e) { return e.nome; }));
+    if (tl.length === 1) quem += ', da turma ' + tl[0];
+    else if (tl.length > 1) quem = 'os estudantes ' + joinPt(env.map(function (e) { return e.nome + ' (' + turmaNome(e.turma) + ')'; }));
+  } else {
+    quem = 'o(a) estudante ' + (env[0] ? env[0].nome : '') + (tl[0] ? ', da turma ' + tl[0] : '');
+  }
+  var LOC = { 'sala de aula': 'na sala de aula', 'corredor': 'no corredor', 'pátio': 'no pátio', 'quadra': 'na quadra', 'refeitório': 'no refeitório',
+    'banheiro': 'no banheiro', 'portaria': 'na portaria', 'biblioteca': 'na biblioteca' };
+  var local = LOC[r.local] ? LOC[r.local] + ' da escola' : 'nas dependências da escola';
+  var relato = cleanDash(r.relato);
+  if (relato && !/[.!?]$/.test(relato)) relato += '.';
+  var abre = r.relator ? 'Conforme relato de ' + cleanDash(r.relator) + ', ' : 'Conforme apurado pela coordenação pedagógica, ';
+  var relTxt = relato ? abre + relato.charAt(0).toLowerCase() + relato.slice(1) : '';
+  var p1 = (dataExtenso(r.data) + ', ' + momento(r.horario) + ', ' + local + ', registrou-se ocorrência envolvendo ' + quem +
+    ', classificada como ' + String(r.tipo || '').toLowerCase() + ' e considerada ' + ({ leve: 'leve', media: 'de gravidade média', grave: 'grave' })[r.grav || 'leve'] + '. ' + relTxt).trim();
+  var provs = (r.providencias || []).slice();
+  if (r.outras) provs.push(cleanDash(r.outras).replace(/\.$/, '').replace(/^./, function (c) { return c.toLowerCase(); }));
+  var p2 = provs.length ? 'Diante do ocorrido, a coordenação pedagógica adotou as seguintes providências: ' + joinPt(provs) + '.'
+    : 'Diante do ocorrido, a coordenação pedagógica tomou ciência dos fatos e acompanhará a situação.';
+  var st = r.status === 'encerrada' ? ' A ocorrência foi considerada encerrada.' : r.status === 'familia' ? ' A família foi comunicada sobre o ocorrido.' : '';
+  var reg = r.registrador ? cleanDash(r.registrador) + ', da coordenação pedagógica,' : 'a coordenação pedagógica';
+  var p3 = 'O presente registro foi lavrado por ' + reg + ' e vai assinado pelos presentes.' + st;
+  return [p1, p2, p3];
+}
+function sigs(r) {
+  var env = envolvidos(r), out = ['Coordenação pedagógica'];
+  if (env.length <= 1) out.push('Estudante'); else env.forEach(function (e) { out.push('Estudante: ' + e.nome); });
+  out.push('Responsável legal');
+  return out;
+}
+function renderDoc(r) {
+  $('#doc').innerHTML = '<div class="head">' + HEADER.map(esc).join('<br>') + '</div><h2>REGISTRO DE OCORRÊNCIA</h2>' +
+    buildParagraphs(r).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') +
+    '<p style="text-align:right;margin-top:16px">Belo Horizonte, ' + esc(fmtLong(r.data)) + '.</p>' +
+    '<div class="sigs">' + sigs(r).map(function (s) { return '<div class="sig">' + esc(s) + '</div>'; }).join('') + '</div>';
+}
+function plainText(r) {
+  return HEADER.join('\n') + '\n\nREGISTRO DE OCORRÊNCIA\n\n' + buildParagraphs(r).join('\n\n') + '\n\nBelo Horizonte, ' + fmtLong(r.data) + '.\n\n' +
+    sigs(r).map(function (s) { return '_______________________________\n' + s; }).join('\n\n');
+}
+function wordFile(r) {
+  var ps = buildParagraphs(r).map(function (p) { return '<p class=MsoNormal style="text-align:justify;line-height:150%">' + esc(p) + '</p>'; }).join('');
+  var sg = sigs(r).map(function (s) { return '<p class=MsoNormal style="text-align:center;margin-top:36pt">______________________________________<br>' + esc(s) + '</p>'; }).join('');
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Registro de ocorrência</title>' +
+    '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+    '<style>@page Section1{size:21cm 29.7cm;margin:2cm 2cm 2cm 2cm;mso-footer:f1}div.Section1{page:Section1}body,p{font-family:Calibri,sans-serif;font-size:12pt}p.MsoNormal{margin:0 0 8pt 0}p.MsoFooter{text-align:center;font-size:9pt}</style></head><body><div class=Section1>' +
+    '<p class=MsoNormal style="text-align:center;font-weight:bold;font-size:11pt;line-height:120%;margin:0">' + HEADER.map(esc).join('<br>') + '</p>' +
+    '<p class=MsoNormal style="text-align:center;font-weight:bold;font-size:13pt;margin:18pt 0 12pt">REGISTRO DE OCORRÊNCIA</p>' + ps +
+    '<p class=MsoNormal style="text-align:right;margin-top:12pt">Belo Horizonte, ' + esc(fmtLong(r.data)) + '.</p>' + sg +
+    '<div style="mso-element:footer" id=f1><p class=MsoFooter>Página <span style="mso-field-code:\' PAGE \'"></span></p></div></div></body></html>';
+}
+
+// ---------- seleção de estudantes ----------
+function renderPick() {
+  var t = $('#f-turma').value, q = norm($('#f-busca').value);
+  var ids = {}; sel.forEach(function (e) { ids[e.id] = 1; });
+  $('#selEst').innerHTML = sel.length ? sel.map(function (e) {
+    return '<span class="pill">' + esc(e.nome) + ' · ' + esc(turmaNome(e.turma)) + '<button type="button" data-unsel="' + esc(e.id) + '" aria-label="Tirar ' + esc(e.nome) + '">×</button></span>';
+  }).join('') : '<span class="hint">Nenhum estudante marcado.</span>';
+  if (!t) { $('#pickList').innerHTML = '<label style="cursor:default;color:var(--muted)">Escolha a turma para ver a lista de estudantes.</label>'; return; }
+  var lista = ESTUD.filter(function (e) { return e.turma === t && (!q || norm(e.nome).indexOf(q) >= 0); });
+  $('#pickList').innerHTML = lista.length ? lista.map(function (e) {
+    return '<label><input type="checkbox" data-pick="' + esc(e.id) + '"' + (ids[e.id] ? ' checked' : '') + '>' + esc(e.nome) + '</label>';
+  }).join('') : '<label style="cursor:default;color:var(--muted)">Nenhum estudante encontrado.</label>';
+}
+$('#f-turma').addEventListener('change', function () { $('#f-busca').value = ''; renderPick(); });
+$('#f-busca').addEventListener('input', renderPick);
+$('#pickList').addEventListener('change', function (e) {
+  var id = e.target.dataset.pick; if (!id) return;
+  if (e.target.checked) { if (!sel.some(function (x) { return x.id === id; })) sel.push(ESTPOR[id]); }
+  else sel = sel.filter(function (x) { return x.id !== id; });
+  renderPick();
+});
+
+// ---------- formulário ----------
+function readForm() {
+  var turmas = {}; sel.forEach(function (e) { turmas[e.turma] = 1; });
+  return {
+    id: editingId || '',
+    data: $('#f-data').value || todayISO(),
+    horario: $('#f-horario').value,
+    turma: Object.keys(turmas).join(','),
+    estudanteIds: sel.map(function (e) { return e.id; }),
+    estudantes: sel.map(function (e) { return e.nome; }).join('; '),
+    tipo: $('#f-tipo').value,
+    local: $('#f-local').value,
+    grav: (document.querySelector('input[name=grav]:checked') || {}).value || 'leve',
+    relator: $('#f-relator').value.trim(),
+    relato: $('#f-relato').value.trim(),
+    providencias: [].map.call(document.querySelectorAll('#prov input:checked'), function (i) { return i.value; }),
+    outras: $('#f-outras').value.trim(),
+    registrador: $('#f-registrador').value.trim(),
+    status: $('#f-status').value
+  };
+}
+function fillForm(r) {
+  $('#f-data').value = r.data || todayISO();
+  $('#f-horario').value = r.horario || '1º horário';
+  var ids = r.estudanteIds || [], nomes = String(r.estudantes || '').split(/\s*;\s*/).filter(Boolean);
+  sel = ids.map(function (id, i) { return ESTPOR[id] || { id: id, nome: nomes[i] || id, turma: String(r.turma || '').split(',')[0] }; });
+  $('#f-turma').value = sel.length ? sel[0].turma : '';
+  $('#f-busca').value = '';
+  $('#f-tipo').value = r.tipo || 'Indisciplina em sala de aula';
+  $('#f-local').value = r.local || 'sala de aula';
+  [].forEach.call(document.querySelectorAll('input[name=grav]'), function (i) { i.checked = i.value === (r.grav || 'leve'); });
+  $('#f-relator').value = r.relator || '';
+  $('#f-relato').value = r.relato || '';
+  var pv = {}; (r.providencias || []).forEach(function (p) { pv[p] = 1; });
+  [].forEach.call(document.querySelectorAll('#prov input'), function (i) { i.checked = !!pv[i.value]; });
+  $('#f-outras').value = r.outras || '';
+  $('#f-registrador').value = r.registrador || (SESS && SESS.eu ? SESS.eu.nome : '');
+  $('#f-status').value = r.status || 'aberta';
+  renderPick();
+}
+function resetForm() {
+  editingId = null; fillForm({});
+  $('#form-title').textContent = 'Dados da ocorrência';
+  $('#btn-salvar').textContent = 'Salvar registro';
+  $('#form-msg').textContent = '';
+}
+$('#form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var r = readForm();
+  if (!r.estudanteIds.length) { $('#form-msg').textContent = 'Marque pelo menos um estudante.'; $('#f-turma').focus(); return; }
+  if (!r.relato) { $('#form-msg').textContent = 'Descreva o que aconteceu antes de salvar.'; $('#f-relato').focus(); return; }
+  var editando = !!editingId;
+  $('#form-msg').textContent = '';
+  chamar('Salvando…', 'salvarOcorrencia', r).then(function (res) {
+    setDados(res); toast(editando ? 'Registro atualizado' : 'Registro salvo');
+    resetForm(); openDoc(res.salvo, 'hist');
+  }).catch(function (err) { $('#form-msg').textContent = err.message; if (!SESS) show('login'); });
+});
+$('#btn-preview').addEventListener('click', function () {
+  var r = readForm();
+  if (!r.estudanteIds.length || !r.relato) { $('#form-msg').textContent = 'Marque o estudante e escreva o relato para gerar o texto.'; return; }
+  openDoc(r, 'novo');
+});
+$('#btn-limpar').addEventListener('click', resetForm);
+
+// ---------- documento ----------
+function openDoc(r, ret) { docRecord = r; docReturn = ret; renderDoc(r); show('doc'); window.scrollTo(0, 0); }
+$('#btn-voltar').addEventListener('click', function () { show(docReturn); });
+$('#btn-imprimir').addEventListener('click', function () { window.print(); });
+$('#btn-copiar').addEventListener('click', function () {
+  var txt = plainText(docRecord);
+  var ok = function () { toast('Texto copiado'); };
+  var fallback = function () { var s = window.getSelection(), rg = document.createRange(); rg.selectNodeContents($('#doc')); s.removeAllRanges(); s.addRange(rg); toast('Texto selecionado. Use copiar do aparelho.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback); else fallback();
+});
+$('#btn-baixar').addEventListener('click', function () {
+  var nome = (String(docRecord.estudantes || '').split(';')[0] || 'estudante').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/[^A-Za-z0-9]+/g, '_');
+  var blob = new Blob(['\ufeff' + wordFile(docRecord)], { type: 'application/msword' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Ocorrencia_' + docRecord.data + '_' + nome + '.doc';
+  document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+});
+
+// ---------- histórico ----------
+function chavesDe(r) {
+  var ids = r.estudanteIds || [], nomes = String(r.estudantes || '').split(/\s*;\s*/).filter(Boolean);
+  return nomes.map(function (n, i) { return { k: ids[i] || norm(n), nome: n }; });
+}
+function countsByStudent() {
+  var m = {};
+  records.forEach(function (r) {
+    chavesDe(r).forEach(function (c) {
+      var est = ESTPOR[c.k];
+      var e = m[c.k] || { k: c.k, nome: est ? est.nome : c.nome, turma: est ? est.turma : String(r.turma || '').split(',')[0], total: 0, graves: 0, abertas: 0, ultima: '' };
+      e.total++; if (r.grav === 'grave') e.graves++; if (r.status !== 'encerrada') e.abertas++;
+      if ((r.data || '') > e.ultima) e.ultima = r.data || '';
+      m[c.k] = e;
+    });
+  });
+  return m;
+}
+function renderHist() {
+  var q = norm($('#q').value), st = $('#q-status').value, gv = $('#q-grav').value, counts = countsByStudent();
+  var list = records.filter(function (r) {
+    if (st && r.status !== st) return false;
+    if (gv && r.grav !== gv) return false;
+    if (q) { var hay = norm([r.estudantes, r.turma, turmaNome(String(r.turma).split(',')[0]), r.relato, r.tipo, r.relator].join(' ')); if (hay.indexOf(q) < 0) return false; }
+    return true;
+  });
+  var abertas = records.filter(function (r) { return r.status === 'aberta'; }).length;
+  var graves = records.filter(function (r) { return r.grav === 'grave'; }).length;
+  $('#summary').innerHTML = records.length ? '<span><b>' + records.length + '</b> registros</span><span><b>' + abertas + '</b> abertos</span><span><b>' + graves + '</b> graves</span>' +
+    (list.length !== records.length ? '<span><b>' + list.length + '</b> no filtro</span>' : '') : '';
+  if (!records.length) { $('#list').innerHTML = '<div class="empty"><strong>Nenhuma ocorrência registrada ainda</strong><span>Os registros salvos aparecem aqui, do mais recente para o mais antigo, com a gravidade marcada na lateral.</span><button class="btn primary small" type="button" data-go="novo">Fazer o primeiro registro</button></div>'; return; }
+  if (!list.length) { $('#list').innerHTML = '<div class="empty"><strong>Nada encontrado</strong><span>Ajuste a busca ou os filtros.</span></div>'; return; }
+  $('#list').innerHTML = list.map(function (r) {
+    var rein = chavesDe(r).some(function (c) { return (counts[c.k] || {}).total >= 3; });
+    var turmas = String(r.turma || '').split(',').filter(Boolean).map(turmaNome).join(', ');
+    var acts = pendingDelete === r.id
+      ? '<div class="confirm"><span>Apagar este registro de vez?</span><button class="btn small danger" data-del-ok="' + esc(r.id) + '">Apagar</button><button class="btn small" data-del-no="1">Cancelar</button></div>'
+      : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button><button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' +
+        (r.status !== 'encerrada' ? '<button class="btn small" data-close="' + esc(r.id) + '">Encerrar</button>' : '') +
+        '<button class="btn small danger" data-del="' + esc(r.id) + '">Apagar</button></div>';
+    return '<article class="card ' + esc(r.grav) + '"><div class="stripe"></div><div class="body">' +
+      '<div class="row1"><span class="who">' + esc(String(r.estudantes).split(/\s*;\s*/).join(', ')) + '</span><span class="meta">' + esc(fmtShort(r.data)) + ' · ' + esc(r.horario) + (turmas ? ' · ' + esc(turmas) : '') + '</span></div>' +
+      '<div class="tags"><span class="pill">' + esc(r.tipo) + '</span><span class="pill st-' + esc(r.status) + '">' + esc(STATUS[r.status] || '') + '</span>' + (rein ? '<span class="pill rein">Reincidente</span>' : '') + '</div>' +
+      '<div class="rel">' + esc(r.relato) + '</div>' + acts + '</div></article>';
+  }).join('');
+}
+['#q', '#q-status', '#q-grav'].forEach(function (s) { $(s).addEventListener('input', renderHist); });
+
+function renderRank() {
+  var c = countsByStudent();
+  var arr = Object.keys(c).map(function (k) { return c[k]; }).sort(function (a, b) { return b.total - a.total || b.graves - a.graves || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  if (!arr.length) { $('#rank').innerHTML = '<div class="empty"><strong>Sem estudantes no histórico</strong><span>Quando houver registros, esta lista mostra quantas ocorrências cada estudante tem, quantas são graves e quantas seguem abertas.</span></div>'; return; }
+  $('#rank').innerHTML = '<div class="tscroll"><table class="rank"><thead><tr><th>Estudante</th><th>Turma</th><th style="text-align:right">Total</th><th style="text-align:right">Graves</th><th style="text-align:right">Abertas</th><th>Última</th></tr></thead><tbody>' +
+    arr.map(function (e) {
+      return '<tr><td><button class="linkish" data-student="' + esc(e.nome) + '">' + esc(e.nome) + '</button>' + (e.total >= 3 ? ' <span class="pill rein">Reincidente</span>' : '') + '</td><td>' + esc(turmaNome(e.turma)) +
+        '</td><td class="n">' + e.total + '</td><td class="n">' + e.graves + '</td><td class="n">' + e.abertas + '</td><td class="n">' + esc(fmtShort(e.ultima)) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('button'); if (!t) return;
+  var d = t.dataset;
+  if (d.unsel) { sel = sel.filter(function (x) { return x.id !== d.unsel; }); renderPick(); return; }
+  if (d.go) { show(d.go); return; }
+  if (d.doc) { var r = records.filter(function (x) { return x.id === d.doc; })[0]; if (r) openDoc(r, 'hist'); return; }
+  if (d.edit) {
+    var r2 = records.filter(function (x) { return x.id === d.edit; })[0]; if (!r2) return;
+    editingId = r2.id; fillForm(r2);
+    $('#form-title').textContent = 'Editando ocorrência'; $('#btn-salvar').textContent = 'Salvar alterações';
+    show('novo'); window.scrollTo(0, 0); return;
+  }
+  if (d.close) { chamar('Encerrando…', 'encerrarOcorrencia', d.close).then(function (res) { setDados(res); renderHist(); renderRank(); toast('Ocorrência encerrada'); }).catch(function (err) { toast(err.message); }); return; }
+  if (d.del) { pendingDelete = d.del; renderHist(); return; }
+  if (d.delNo) { pendingDelete = null; renderHist(); return; }
+  if (d.delOk) { pendingDelete = null; chamar('Apagando…', 'excluirOcorrencia', d.delOk).then(function (res) { setDados(res); renderHist(); renderRank(); toast('Registro apagado'); }).catch(function (err) { toast(err.message); renderHist(); }); return; }
+  if (d.student) { $('#q').value = d.student; $('#q-status').value = ''; $('#q-grav').value = ''; show('hist'); return; }
+});
+
+// ---------- navegação e sessão ----------
+function show(v) {
+  view = v;
+  ['login', 'novo', 'doc', 'hist', 'est'].forEach(function (x) { $('#view-' + x).hidden = x !== v; });
+  $('#tabs').hidden = v === 'login';
+  [].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.setAttribute('aria-selected', String(b.dataset.view === v)); });
+  if (v === 'hist') renderHist();
+  if (v === 'est') renderRank();
+  topo();
+}
+[].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
+
+function topo() {
+  var u = $('#topUser');
+  if (!SESS) { u.innerHTML = '<span style="opacity:.85">Coordenação pedagógica</span>'; return; }
+  u.innerHTML = '<span>' + esc(SESS.eu.nome) + '</span><button type="button" id="btnAtualizar">Atualizar</button><button type="button" id="btnSair">Sair</button>';
+  $('#btnSair').onclick = function () { var tk = SESS && SESS.token; sairLocal(); api('sair', tk).catch(function () {}); show('login'); };
+  $('#btnAtualizar').onclick = carregarTudo;
+}
+function sairLocal() { SESS = null; lsSet(CHAVE, null); records = []; ESTUD = []; ESTPOR = {}; }
+
+$('#loginForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var u = $('#lUsu').value.trim(), s = $('#lSen').value;
+  if (!u || !s) { $('#lErro').textContent = 'Preencha o usuário e a senha.'; return; }
+  $('#lErro').textContent = '';
+  chamar('Entrando…', 'entrar', u, s).then(function (r) {
+    SESS = r; lsSet(CHAVE, JSON.stringify(r)); $('#lSen').value = ''; carregarTudo();
+  }).catch(function (err) { $('#lErro').textContent = err.message; });
+});
+
+function carregarTudo() {
+  chamar('Carregando turmas e registros…', 'iniciar').then(function (d) {
+    $('#conn').hidden = true; setDados(d); resetForm(); show(view === 'login' || view === 'doc' ? 'novo' : view);
+  }).catch(function (err) {
+    if (!SESS) { show('login'); $('#lErro').textContent = err.message; return; }
+    $('#conn').hidden = false; $('#conn').className = 'banner warn'; $('#conn').textContent = err.message;
+  });
+}
+
+if (SESS && SESS.token) { view = 'novo'; topo(); carregarTudo(); } else { show('login'); }
+</script>
+</body>
+</html>
