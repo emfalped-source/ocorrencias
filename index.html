@@ -116,6 +116,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .pill.st-familia{background:var(--media-bg);color:var(--media)}
 .pill.st-encerrada{background:var(--leve-bg);color:var(--leve)}
 .pill.rein{background:var(--grave-bg);color:var(--grave)}
+.pill.nova{background:var(--ochre);color:#fff}
+.badge{display:inline-block;min-width:18px;margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--ochre);color:#fff;font-size:.72rem;line-height:1.4;text-align:center}
+.novas{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--ochre);border-left-width:4px;background:var(--surface);padding:10px 14px;border-radius:8px;font-size:.9rem}
+.card.nova{box-shadow:0 0 0 2px var(--ochre)}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .card .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 
@@ -167,7 +171,7 @@ table.rank tr:hover td{background:var(--surface-2)}
     </div>
     <nav class="tabs" role="tablist" aria-label="Seções" id="tabs" hidden>
       <button role="tab" id="tab-novo" aria-selected="true" data-view="novo">Novo registro</button>
-      <button role="tab" id="tab-hist" aria-selected="false" data-view="hist">Histórico</button>
+      <button role="tab" id="tab-hist" aria-selected="false" data-view="hist">Histórico<span class="badge" id="badgeNovas" hidden></span></button>
       <button role="tab" id="tab-est" aria-selected="false" data-view="est">Por estudante</button>
     </nav>
   </div>
@@ -383,6 +387,8 @@ var records = [];
 var editingId = null, docRecord = null, docReturn = 'novo', pendingDelete = null;
 var sel = [];            // [{id,nome,turma}] marcados no formulário
 var view = 'novo';
+var AVISO = { ativo: false };   // aviso de novas ocorrências (só para os usuários marcados no servidor)
+var TITULO = document.title;
 
 function setDados(d) {
   if (d.estudantes) {
@@ -392,10 +398,37 @@ function setDados(d) {
     TURMAS = Object.keys(t).sort(function (a, b) { return turmaNome(a).localeCompare(turmaNome(b), 'pt-BR', { numeric: true }); });
     $('#f-turma').innerHTML = '<option value="">Escolha a turma</option>' + TURMAS.map(function (x) { return '<option value="' + esc(x) + '">' + esc(turmaRotulo(x)) + '</option>'; }).join('');
   }
+  if (d.aviso) AVISO = d.aviso;
   if (d.ocorrencias) {
     records = d.ocorrencias.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || '') || (b.criadoEm || '').localeCompare(a.criadoEm || ''); });
   }
+  atualizarAviso();
 }
+
+// ---------- aviso de novas ocorrências ----------
+function ehNova(r) {
+  return !!(AVISO.ativo && AVISO.visto && SESS && SESS.eu && (r.criadoEm || '') > AVISO.visto && r.criadoPor !== SESS.eu.nome);
+}
+function novas() { return records.filter(ehNova); }
+function atualizarAviso() {
+  var n = novas().length, b = $('#badgeNovas');
+  b.hidden = !n; b.textContent = n;
+  b.setAttribute('aria-label', n + (n === 1 ? ' ocorrência nova' : ' ocorrências novas'));
+  document.title = (n ? '(' + n + ') ' : '') + TITULO;
+}
+function verificarNovas() {
+  if (!SESS || !AVISO.ativo || document.hidden || view === 'login') return;
+  var antes = novas().length;
+  api('listar').then(function (d) {
+    setDados(d); atualizarAviso();
+    var depois = novas().length;
+    if (depois > antes) toast(depois - antes === 1 ? 'Nova ocorrência registrada' : (depois - antes) + ' novas ocorrências registradas');
+    if (view === 'hist') renderHist();
+    if (view === 'est') renderRank();
+  }).catch(function () {});
+}
+setInterval(verificarNovas, 120000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) verificarNovas(); });
 
 // ---------- texto oficial ----------
 function dataExtenso(iso) {
@@ -608,7 +641,9 @@ function renderHist() {
     (list.length !== records.length ? '<span><b>' + list.length + '</b> no filtro</span>' : '') : '';
   if (!records.length) { $('#list').innerHTML = '<div class="empty"><strong>Nenhuma ocorrência registrada ainda</strong><span>Os registros salvos aparecem aqui, do mais recente para o mais antigo, com a gravidade marcada na lateral.</span><button class="btn primary small" type="button" data-go="novo">Fazer o primeiro registro</button></div>'; return; }
   if (!list.length) { $('#list').innerHTML = '<div class="empty"><strong>Nada encontrado</strong><span>Ajuste a busca ou os filtros.</span></div>'; return; }
-  $('#list').innerHTML = list.map(function (r) {
+  var nn = novas().length;
+  var avisoHtml = nn ? '<div class="novas" role="status"><span><b>' + nn + '</b> ' + (nn === 1 ? 'ocorrência nova' : 'ocorrências novas') + ' desde a sua última visita</span><button class="btn small" type="button" data-vistas="1">Marcar como vistas</button></div>' : '';
+  $('#list').innerHTML = avisoHtml + list.map(function (r) {
     var rein = chavesDe(r).some(function (c) { return (counts[c.k] || {}).total >= 3; });
     var turmas = String(r.turma || '').split(',').filter(Boolean).map(turmaNome).join(', ');
     var acts = pendingDelete === r.id
@@ -616,9 +651,10 @@ function renderHist() {
       : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button><button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' +
         (r.status !== 'encerrada' ? '<button class="btn small" data-close="' + esc(r.id) + '">Encerrar</button>' : '') +
         '<button class="btn small danger" data-del="' + esc(r.id) + '">Apagar</button></div>';
-    return '<article class="card ' + esc(r.grav) + '"><div class="stripe"></div><div class="body">' +
+    var nv = ehNova(r);
+    return '<article class="card ' + esc(r.grav) + (nv ? ' nova' : '') + '"><div class="stripe"></div><div class="body">' +
       '<div class="row1"><span class="who">' + esc(String(r.estudantes).split(/\s*;\s*/).join(', ')) + '</span><span class="meta">' + esc(fmtShort(r.data)) + ' · ' + esc(r.horario) + (turmas ? ' · ' + esc(turmas) : '') + '</span></div>' +
-      '<div class="tags"><span class="pill">' + esc(r.tipo) + '</span><span class="pill st-' + esc(r.status) + '">' + esc(STATUS[r.status] || '') + '</span>' + (rein ? '<span class="pill rein">Reincidente</span>' : '') + '</div>' +
+      '<div class="tags"><span class="pill">' + esc(r.tipo) + '</span><span class="pill st-' + esc(r.status) + '">' + esc(STATUS[r.status] || '') + '</span>' + (rein ? '<span class="pill rein">Reincidente</span>' : '') + (nv ? '<span class="pill nova">Nova</span>' : '') + '</div>' +
       '<div class="rel">' + esc(r.relato) + '</div>' + acts + '</div></article>';
   }).join('');
 }
@@ -651,6 +687,7 @@ document.addEventListener('click', function (e) {
   if (d.del) { pendingDelete = d.del; renderHist(); return; }
   if (d.delNo) { pendingDelete = null; renderHist(); return; }
   if (d.delOk) { pendingDelete = null; chamar('Apagando…', 'excluirOcorrencia', d.delOk).then(function (res) { setDados(res); renderHist(); renderRank(); toast('Registro apagado'); }).catch(function (err) { toast(err.message); renderHist(); }); return; }
+  if (d.vistas) { chamar('Marcando…', 'marcarVistas').then(function (a) { AVISO = a; atualizarAviso(); renderHist(); toast('Tudo marcado como visto'); }).catch(function (err) { toast(err.message); }); return; }
   if (d.student) { $('#q').value = d.student; $('#q-status').value = ''; $('#q-grav').value = ''; show('hist'); return; }
 });
 
@@ -662,6 +699,7 @@ function show(v) {
   [].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.setAttribute('aria-selected', String(b.dataset.view === v)); });
   if (v === 'hist') renderHist();
   if (v === 'est') renderRank();
+  atualizarAviso();
   topo();
 }
 [].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
@@ -673,7 +711,7 @@ function topo() {
   $('#btnSair').onclick = function () { var tk = SESS && SESS.token; sairLocal(); api('sair', tk).catch(function () {}); show('login'); };
   $('#btnAtualizar').onclick = carregarTudo;
 }
-function sairLocal() { SESS = null; lsSet(CHAVE, null); records = []; ESTUD = []; ESTPOR = {}; }
+function sairLocal() { SESS = null; lsSet(CHAVE, null); records = []; ESTUD = []; ESTPOR = {}; AVISO = { ativo: false }; }
 
 $('#loginForm').addEventListener('submit', function (e) {
   e.preventDefault();
@@ -687,7 +725,10 @@ $('#loginForm').addEventListener('submit', function (e) {
 
 function carregarTudo() {
   chamar('Carregando turmas e registros…', 'iniciar').then(function (d) {
-    $('#conn').hidden = true; setDados(d); resetForm(); show(view === 'login' || view === 'doc' ? 'novo' : view);
+    $('#conn').hidden = true; setDados(d); resetForm();
+    var nn = novas().length;
+    show(nn && (view === 'login' || view === 'novo') ? 'hist' : (view === 'login' || view === 'doc' ? 'novo' : view));
+    if (nn) toast(nn === 1 ? 'Há 1 ocorrência nova' : 'Há ' + nn + ' ocorrências novas');
   }).catch(function (err) {
     if (!SESS) { show('login'); $('#lErro').textContent = err.message; return; }
     $('#conn').hidden = false; $('#conn').className = 'banner warn'; $('#conn').textContent = err.message;
