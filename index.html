@@ -185,7 +185,7 @@ table.rank tr:hover td{background:var(--surface-2)}
     <section id="view-login" hidden>
       <form class="login sheet" id="loginForm" novalidate>
         <h2>Entrar</h2>
-        <p class="hint" style="margin:0">Use o mesmo usuário e senha do Corretor EMFAL. O acesso é só para a coordenação.</p>
+        <p class="hint" style="margin:0">Use o mesmo usuário e senha do Corretor EMFAL.</p>
         <label class="f"><span>Usuário</span><input type="text" id="lUsu" autocomplete="username" autocapitalize="none"></label>
         <label class="f"><span>Senha</span><input type="password" id="lSen" autocomplete="current-password"></label>
         <div class="erro" id="lErro" role="alert"></div>
@@ -405,6 +405,16 @@ function setDados(d) {
   atualizarAviso();
 }
 
+// ---------- permissões ----------
+// Todos veem o histórico. Editar e encerrar: coordenação ou quem registrou. Apagar: só a coordenação.
+function souCoord() { return !!(SESS && SESS.eu && (SESS.eu.perfil || 'coordenacao') === 'coordenacao'); }
+function souAutor(r) {
+  if (!SESS || !SESS.eu) return false;
+  if (r.criadoPorUsuario) return r.criadoPorUsuario === SESS.eu.usuario;
+  return !!r.criadoPor && r.criadoPor === SESS.eu.nome;
+}
+function podeEditar(r) { return souCoord() || souAutor(r); }
+
 // ---------- aviso de novas ocorrências ----------
 function ehNova(r) {
   return !!(AVISO.ativo && AVISO.visto && SESS && SESS.eu && (r.criadoEm || '') > AVISO.visto && r.criadoPor !== SESS.eu.nome);
@@ -473,7 +483,8 @@ function buildParagraphs(r) {
   var p2 = provs.length ? 'Diante do ocorrido, a coordenação pedagógica adotou as seguintes providências: ' + joinPt(provs) + '.'
     : 'Diante do ocorrido, a coordenação pedagógica tomou ciência dos fatos e acompanhará a situação.';
   var st = r.status === 'encerrada' ? ' A ocorrência foi considerada encerrada.' : r.status === 'familia' ? ' A família foi comunicada sobre o ocorrido.' : '';
-  var reg = r.registrador ? cleanDash(r.registrador) + ', da coordenação pedagógica,' : 'a coordenação pedagógica';
+  var cargo = r.criadoPorPerfil && r.criadoPorPerfil !== 'coordenacao' ? ', docente desta unidade escolar,' : ', da coordenação pedagógica,';
+  var reg = r.registrador ? cleanDash(r.registrador) + cargo : 'a coordenação pedagógica';
   var p3 = 'O presente registro foi lavrado por ' + reg + ' e vai assinado pelos presentes.' + st;
   return [p1, p2, p3];
 }
@@ -648,9 +659,9 @@ function renderHist() {
     var turmas = String(r.turma || '').split(',').filter(Boolean).map(turmaNome).join(', ');
     var acts = pendingDelete === r.id
       ? '<div class="confirm"><span>Apagar este registro de vez?</span><button class="btn small danger" data-del-ok="' + esc(r.id) + '">Apagar</button><button class="btn small" data-del-no="1">Cancelar</button></div>'
-      : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button><button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' +
-        (r.status !== 'encerrada' ? '<button class="btn small" data-close="' + esc(r.id) + '">Encerrar</button>' : '') +
-        '<button class="btn small danger" data-del="' + esc(r.id) + '">Apagar</button></div>';
+      : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button>' + (podeEditar(r) ? '<button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' : '') +
+        (podeEditar(r) && r.status !== 'encerrada' ? '<button class="btn small" data-close="' + esc(r.id) + '">Encerrar</button>' : '') +
+        (souCoord() ? '<button class="btn small danger" data-del="' + esc(r.id) + '">Apagar</button>' : '') + '</div>';
     var nv = ehNova(r);
     return '<article class="card ' + esc(r.grav) + (nv ? ' nova' : '') + '"><div class="stripe"></div><div class="body">' +
       '<div class="row1"><span class="who">' + esc(String(r.estudantes).split(/\s*;\s*/).join(', ')) + '</span><span class="meta">' + esc(fmtShort(r.data)) + ' · ' + esc(r.horario) + (turmas ? ' · ' + esc(turmas) : '') + '</span></div>' +
@@ -679,6 +690,7 @@ document.addEventListener('click', function (e) {
   if (d.doc) { var r = records.filter(function (x) { return x.id === d.doc; })[0]; if (r) openDoc(r, 'hist'); return; }
   if (d.edit) {
     var r2 = records.filter(function (x) { return x.id === d.edit; })[0]; if (!r2) return;
+    if (!podeEditar(r2)) { toast('Só a coordenação ou quem registrou pode editar.'); return; }
     editingId = r2.id; fillForm(r2);
     $('#form-title').textContent = 'Editando ocorrência'; $('#btn-salvar').textContent = 'Salvar alterações';
     show('novo'); window.scrollTo(0, 0); return;
@@ -725,6 +737,7 @@ $('#loginForm').addEventListener('submit', function (e) {
 
 function carregarTudo() {
   chamar('Carregando turmas e registros…', 'iniciar').then(function (d) {
+    if (d.eu && SESS) { SESS.eu = d.eu; lsSet(CHAVE, JSON.stringify(SESS)); topo(); }
     $('#conn').hidden = true; setDados(d); resetForm();
     var nn = novas().length;
     show(nn && (view === 'login' || view === 'novo') ? 'hist' : (view === 'login' || view === 'doc' ? 'novo' : view));
