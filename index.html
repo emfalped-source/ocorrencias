@@ -153,12 +153,29 @@ table.rank tr:hover td{background:var(--surface-2)}
 .selected .pill button{appearance:none;border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0 0 0 6px}
 .carga{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:30}
 .carga div{background:var(--surface);color:var(--ink);padding:14px 20px;border-radius:10px;font-size:.95rem;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+/* Advertência escrita: 1/4 de folha A4 (10,5 cm x 14,85 cm), até quatro por folha */
+.adv-preview{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;overflow-x:auto}
+.adv{width:105mm;height:148.5mm;flex:none;background:#fff;color:#111;font-family:Calibri,Carlito,"Public Sans",sans-serif;padding:7mm 7mm 6mm;display:flex;flex-direction:column;border:1px solid var(--line);overflow:hidden}
+.adv .h{text-align:center;font-weight:700;font-size:6.5pt;line-height:1.35}
+.adv h3{text-align:center;font-size:12pt;margin:4mm 0 3mm;letter-spacing:.08em}
+.adv .lin{font-size:10pt;margin:0 0 1.5mm;line-height:1.35}
+.adv .mot{font-size:10pt;border:1px solid #111;padding:2mm 2.5mm;margin:1mm 0 3mm;line-height:1.35;text-align:justify}
+.adv .txt{font-size:9pt;text-align:justify;line-height:1.35;margin:0}
+.adv .ass{margin-top:auto;display:flex;flex-direction:column;gap:10mm}
+.adv .duas{display:grid;grid-template-columns:1.7fr 1fr;gap:5mm}
+.adv .sl{border-top:1px solid #111;padding-top:1mm;font-size:8pt;text-align:center}
+#advPrint{display:none}
 @media print{
   @page{size:A4;margin:2cm}
   body{background:#fff}
   header.top,body::before,.no-print,#conn,.toast{display:none!important}
   main .wrap{padding:0;max-width:none}
   .doc{border:0;padding:0;font-size:12pt}
+  body.imprimindo-adv main,body.imprimindo-adv .carga{display:none!important}
+  body.imprimindo-adv #advPrint{display:block}
+  .adv-page{width:210mm;height:296mm;display:grid;grid-template-columns:105mm 105mm;grid-template-rows:148mm 148mm;break-after:page;page-break-after:always;overflow:hidden}
+  .adv-page:last-child{break-after:auto;page-break-after:auto}
+  .adv-page .adv{width:105mm;height:148mm;border:.2mm dashed #888}
 }
 </style>
 </head>
@@ -293,8 +310,32 @@ table.rank tr:hover td{background:var(--surface-2)}
           <button class="btn primary" id="btn-imprimir" type="button">Imprimir</button>
           <button class="btn" id="btn-baixar" type="button">Baixar para Word</button>
           <button class="btn" id="btn-copiar" type="button">Copiar texto</button>
+          <button class="btn" id="btn-adv-doc" type="button">Advertência para os pais</button>
         </div>
         <div class="doc" id="doc"></div>
+      </div>
+    </section>
+
+    <!-- ADVERTÊNCIA ESCRITA -->
+    <section id="view-adv" hidden>
+      <div class="doc-wrap">
+        <div class="actions no-print">
+          <button class="btn" id="btn-adv-voltar" type="button">Voltar</button>
+          <button class="btn primary" id="btn-adv-imprimir" type="button">Imprimir advertência</button>
+        </div>
+        <div class="sheet no-print"><fieldset>
+          <legend>Advertência escrita para o responsável</legend>
+          <label class="f"><span>O que aconteceu (frase curta)</span><input type="text" id="adv-motivo" maxlength="150"></label>
+          <p class="hint" style="margin:-6px 0 0">Uma frase só, por exemplo: Estudante agrediu colega na sala de aula. O relato completo continua no registro de ocorrência.</p>
+          <div id="adv-est-box">
+            <div class="lbl" style="margin-bottom:8px">Imprimir para</div>
+            <div class="chips" id="adv-est"></div>
+          </div>
+          <label class="f" style="max-width:220px"><span>Vias por estudante</span>
+            <select id="adv-vias"><option value="1">1 via</option><option value="2">2 vias</option><option value="3">3 vias</option><option value="4">4 vias</option></select></label>
+          <p class="hint" style="margin:0">Cada advertência ocupa 1/4 de folha A4. Cabem quatro por folha: recorte nas linhas tracejadas. Na janela de impressão, deixe a escala em 100% (tamanho real).</p>
+        </fieldset></div>
+        <div class="adv-preview" id="advPrev"></div>
       </div>
     </section>
 
@@ -323,6 +364,8 @@ table.rank tr:hover td{background:var(--surface-2)}
   </div>
 </main>
 <div class="carga" id="carga" hidden><div id="cargaMsg">Carregando…</div></div>
+<div id="advPrint" aria-hidden="true"></div>
+<style id="pgAdv" media="print"></style>
 
 <script src="https://emfalped-source.github.io/corretor/conta-emfal.js"></script>
 <script>
@@ -517,6 +560,80 @@ function wordFile(r) {
     '<div style="mso-element:footer" id=f1><p class=MsoFooter>Página <span style="mso-field-code:\' PAGE \'"></span></p></div></div></body></html>';
 }
 
+// ---------- advertência escrita (1/4 de folha) ----------
+var ADV_ACAO = {
+  'Indisciplina em sala de aula': 'apresentou comportamento de indisciplina',
+  'Desrespeito a professor ou funcionário': 'desrespeitou professor ou funcionário',
+  'Agressão verbal entre estudantes': 'agrediu verbalmente colega',
+  'Agressão física entre estudantes': 'agrediu fisicamente colega',
+  'Bullying ou intimidação': 'praticou bullying ou intimidação contra colega',
+  'Dano ao patrimônio escolar': 'causou dano ao patrimônio escolar',
+  'Uso indevido de celular': 'fez uso indevido do celular',
+  'Saída de sala sem autorização': 'saiu de sala sem autorização',
+  'Recusa em realizar as atividades': 'recusou-se a realizar as atividades propostas',
+  'Outro': 'envolveu-se em ocorrência disciplinar'
+};
+var ADV_LOC = { 'sala de aula': 'na sala de aula', 'corredor': 'no corredor', 'pátio': 'no pátio', 'quadra': 'na quadra', 'refeitório': 'no refeitório',
+  'banheiro': 'no banheiro', 'portaria': 'na portaria', 'biblioteca': 'na biblioteca', 'outro local': 'nas dependências da escola' };
+var advRec = null, advRet = 'hist', advSel = {};
+function advMotivoPadrao(r) {
+  var acao = ADV_ACAO[r.tipo] || ADV_ACAO.Outro;
+  var semLocal = r.tipo === 'Saída de sala sem autorização' || r.tipo === 'Indisciplina em sala de aula' && r.local === 'sala de aula';
+  return 'Estudante ' + acao + (semLocal ? (r.tipo === 'Indisciplina em sala de aula' ? ' em sala de aula' : '') : ' ' + (ADV_LOC[r.local] || 'nas dependências da escola')) + '.';
+}
+function advMotivo() {
+  var m = cleanDash($('#adv-motivo').value) || advMotivoPadrao(advRec);
+  m = m.charAt(0).toUpperCase() + m.slice(1);
+  return /[.!?]$/.test(m) ? m : m + '.';
+}
+function advHtml(e, r, motivo) {
+  return '<div class="adv"><div class="h">' + HEADER.map(esc).join('<br>') + '</div><h3>ADVERTÊNCIA ESCRITA</h3>' +
+    '<p class="lin"><b>Estudante:</b> ' + esc(e.nome) + '</p>' +
+    '<p class="lin"><b>Turma:</b> ' + esc(turmaNome(e.turma)) + '&nbsp;&nbsp;&nbsp;&nbsp;<b>Data:</b> ' + esc(fmtShort(r.data)) + '</p>' +
+    '<p class="lin" style="margin-top:1.5mm"><b>O que aconteceu:</b></p><div class="mot">' + esc(motivo) + '</div>' +
+    '<p class="txt">Senhor(a) responsável, comunicamos que o(a) estudante recebeu advertência escrita pelo motivo acima. Pedimos que assine e devolva este comunicado à escola.</p>' +
+    '<div class="ass"><div class="duas"><div class="sl">Assinatura do responsável</div><div class="sl">Data</div></div><div class="sl">Coordenação pedagógica</div></div></div>';
+}
+function advEscolhidos() { return envolvidos(advRec).filter(function (e, i) { return advSel[i]; }); }
+function advFichas() {
+  var vias = Number($('#adv-vias').value) || 1, m = advMotivo(), out = [];
+  advEscolhidos().forEach(function (e) { for (var v = 0; v < vias; v++) out.push(advHtml(e, advRec, m)); });
+  return out;
+}
+function renderAdv() {
+  var env = envolvidos(advRec);
+  $('#adv-est-box').hidden = env.length < 2;
+  $('#adv-est').innerHTML = env.map(function (e, i) {
+    return '<label class="chip"><input type="checkbox" data-adv-i="' + i + '"' + (advSel[i] ? ' checked' : '') + '><span>' + esc(e.nome) + '</span></label>';
+  }).join('');
+  var f = advFichas();
+  $('#advPrev').innerHTML = f.length ? f.join('') : '<div class="empty"><strong>Nenhum estudante marcado</strong><span>Marque pelo menos um estudante para imprimir.</span></div>';
+  $('#btn-adv-imprimir').disabled = !f.length;
+}
+function openAdv(r, ret) {
+  advRec = r; advRet = ret; advSel = {};
+  envolvidos(r).forEach(function (e, i) { advSel[i] = true; });
+  $('#adv-motivo').value = advMotivoPadrao(r);
+  $('#adv-vias').value = '1';
+  renderAdv(); show('adv'); window.scrollTo(0, 0);
+}
+function fimImpressaoAdv() { document.body.classList.remove('imprimindo-adv'); $('#advPrint').innerHTML = ''; $('#pgAdv').textContent = ''; }
+$('#adv-motivo').addEventListener('input', renderAdv);
+$('#adv-vias').addEventListener('change', renderAdv);
+$('#adv-est').addEventListener('change', function (e) { var i = e.target.dataset.advI; if (i == null) return; advSel[i] = e.target.checked; renderAdv(); });
+$('#btn-adv-voltar').addEventListener('click', function () { show(advRet); });
+$('#btn-adv-doc').addEventListener('click', function () { if (docRecord) openAdv(docRecord, 'doc'); });
+$('#btn-adv-imprimir').addEventListener('click', function () {
+  var f = advFichas(); if (!f.length) return;
+  var pags = [];
+  for (var i = 0; i < f.length; i += 4) pags.push('<div class="adv-page">' + f.slice(i, i + 4).join('') + '</div>');
+  $('#advPrint').innerHTML = pags.join('');
+  $('#pgAdv').textContent = '@page{size:A4;margin:0}';
+  document.body.classList.add('imprimindo-adv');
+  window.print();
+});
+window.addEventListener('afterprint', fimImpressaoAdv);
+
 // ---------- seleção de estudantes ----------
 function renderPick() {
   var t = $('#f-turma').value, q = norm($('#f-busca').value);
@@ -607,7 +724,7 @@ $('#btn-limpar').addEventListener('click', resetForm);
 // ---------- documento ----------
 function openDoc(r, ret) { docRecord = r; docReturn = ret; renderDoc(r); show('doc'); window.scrollTo(0, 0); }
 $('#btn-voltar').addEventListener('click', function () { show(docReturn); });
-$('#btn-imprimir').addEventListener('click', function () { window.print(); });
+$('#btn-imprimir').addEventListener('click', function () { fimImpressaoAdv(); window.print(); });
 $('#btn-copiar').addEventListener('click', function () {
   var txt = plainText(docRecord);
   var ok = function () { toast('Texto copiado'); };
@@ -660,7 +777,8 @@ function renderHist() {
     var turmas = String(r.turma || '').split(',').filter(Boolean).map(turmaNome).join(', ');
     var acts = pendingDelete === r.id
       ? '<div class="confirm"><span>Apagar este registro de vez?</span><button class="btn small danger" data-del-ok="' + esc(r.id) + '">Apagar</button><button class="btn small" data-del-no="1">Cancelar</button></div>'
-      : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button>' + (podeEditar(r) ? '<button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' : '') +
+      : '<div class="acts"><button class="btn small" data-doc="' + esc(r.id) + '">Texto oficial</button>' +
+        (podeEditar(r) ? '<button class="btn small" data-adv="' + esc(r.id) + '">Advertência</button>' : '') + (podeEditar(r) ? '<button class="btn small" data-edit="' + esc(r.id) + '">Editar</button>' : '') +
         (podeEditar(r) && r.status !== 'encerrada' ? '<button class="btn small" data-close="' + esc(r.id) + '">Encerrar</button>' : '') +
         (souCoord() ? '<button class="btn small danger" data-del="' + esc(r.id) + '">Apagar</button>' : '') + '</div>';
     var nv = ehNova(r);
@@ -688,6 +806,7 @@ document.addEventListener('click', function (e) {
   var d = t.dataset;
   if (d.unsel) { sel = sel.filter(function (x) { return x.id !== d.unsel; }); renderPick(); return; }
   if (d.go) { show(d.go); return; }
+  if (d.adv) { var ra = records.filter(function (x) { return x.id === d.adv; })[0]; if (ra) openAdv(ra, 'hist'); return; }
   if (d.doc) { var r = records.filter(function (x) { return x.id === d.doc; })[0]; if (r) openDoc(r, 'hist'); return; }
   if (d.edit) {
     var r2 = records.filter(function (x) { return x.id === d.edit; })[0]; if (!r2) return;
@@ -707,7 +826,8 @@ document.addEventListener('click', function (e) {
 // ---------- navegação e sessão ----------
 function show(v) {
   view = v;
-  ['login', 'novo', 'doc', 'hist', 'est'].forEach(function (x) { $('#view-' + x).hidden = x !== v; });
+  fimImpressaoAdv();
+  ['login', 'novo', 'doc', 'hist', 'est', 'adv'].forEach(function (x) { $('#view-' + x).hidden = x !== v; });
   $('#tabs').hidden = v === 'login';
   [].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.setAttribute('aria-selected', String(b.dataset.view === v)); });
   if (v === 'hist') renderHist();
