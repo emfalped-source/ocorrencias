@@ -43,6 +43,13 @@ body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--accent)}
 .wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pts{display:inline-block;min-width:3.2em;text-align:center;font-family:var(--f-mono);font-weight:600;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.pts.ok{background:var(--leve-bg);color:var(--leve)} .pts.med{background:var(--media-bg);color:var(--media)} .pts.baixo{background:var(--grave-bg);color:var(--grave)}
+.pill.desc{background:var(--grave-bg);color:var(--grave);border-color:transparent}
+.desc-lista{margin:4px 0 2px;padding-left:18px;font-size:.84rem;color:var(--muted)}
+details.criterios{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 14px;font-size:.88rem}
+details.criterios summary{cursor:pointer;font-weight:600}
+.ao-vivo::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--leve);margin-right:6px;vertical-align:middle}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--accent);color:var(--accent-ink)}
 header.top .wrap{padding-block:14px 0;display:flex;flex-direction:column;gap:10px}
 .brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -190,6 +197,7 @@ table.rank tr:hover td{background:var(--surface-2)}
       <button role="tab" id="tab-novo" aria-selected="true" data-view="novo">Novo registro</button>
       <button role="tab" id="tab-hist" aria-selected="false" data-view="hist">Histórico<span class="badge" id="badgeNovas" hidden></span></button>
       <button role="tab" id="tab-est" aria-selected="false" data-view="est">Por estudante</button>
+      <button role="tab" id="tab-pts" aria-selected="false" data-view="pts">Comportamento</button>
     </nav>
   </div>
 </header>
@@ -244,7 +252,7 @@ table.rank tr:hover td{background:var(--surface-2)}
                 <option>Saída de sala sem autorização</option>
                 <option>Recusa em realizar as atividades</option>
                 <option>Outro</option>
-              </select></label>
+              </select><span class="hint" id="f-tipo-pts" style="text-transform:none;letter-spacing:0;font-weight:400"></span></label>
             <label class="f"><span>Local</span>
               <select id="f-local">
                 <option>sala de aula</option><option>corredor</option><option>pátio</option><option>quadra</option>
@@ -351,6 +359,20 @@ table.rank tr:hover td{background:var(--surface-2)}
         </div>
         <div class="summary" id="summary"></div>
         <div class="list" id="list"></div>
+      </div>
+    </section>
+
+    <!-- PONTOS DE COMPORTAMENTO -->
+    <section id="view-pts" hidden>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="filters">
+          <label class="f"><span>Turma</span><select id="p-turma"></select></label>
+          <label class="f"><span>Período</span><select id="p-per"></select></label>
+          <label class="f"><span>Buscar</span><input type="text" id="p-q" placeholder="Nome do estudante" autocomplete="off"></label>
+        </div>
+        <div class="summary" id="p-sum"></div>
+        <div id="p-tab"></div>
+        <details class="criterios"><summary>Como os pontos são descontados</summary><div id="p-crit"></div></details>
       </div>
     </section>
 
@@ -685,6 +707,7 @@ function fillForm(r) {
   $('#f-turma').value = sel.length ? sel[0].turma : '';
   $('#f-busca').value = '';
   $('#f-tipo').value = r.tipo || 'Indisciplina em sala de aula';
+  try { dicaTipo(); } catch (e) {}
   $('#f-local').value = r.local || 'sala de aula';
   [].forEach.call(document.querySelectorAll('input[name=grav]'), function (i) { i.checked = i.value === (r.grav || 'leve'); });
   $('#f-relator').value = r.relator || '';
@@ -711,6 +734,7 @@ $('#form').addEventListener('submit', function (e) {
   $('#form-msg').textContent = '';
   chamar('Salvando…', 'salvarOcorrencia', r).then(function (res) {
     setDados(res); toast(editando ? 'Registro atualizado' : 'Registro salvo');
+    setTimeout(function () { avisoPontos(r.estudanteIds); }, 2900);
     resetForm(); openDoc(res.salvo, 'hist');
   }).catch(function (err) { $('#form-msg').textContent = err.message; if (!SESS) show('login'); });
 });
@@ -784,20 +808,20 @@ function renderHist() {
     var nv = ehNova(r);
     return '<article class="card ' + esc(r.grav) + (nv ? ' nova' : '') + '"><div class="stripe"></div><div class="body">' +
       '<div class="row1"><span class="who">' + esc(String(r.estudantes).split(/\s*;\s*/).join(', ')) + '</span><span class="meta">' + esc(fmtShort(r.data)) + ' · ' + esc(r.horario) + (turmas ? ' · ' + esc(turmas) : '') + '</span></div>' +
-      '<div class="tags"><span class="pill">' + esc(r.tipo) + '</span><span class="pill st-' + esc(r.status) + '">' + esc(STATUS[r.status] || '') + '</span>' + (rein ? '<span class="pill rein">Reincidente</span>' : '') + (nv ? '<span class="pill nova">Nova</span>' : '') + '</div>' +
+      '<div class="tags"><span class="pill">' + esc(r.tipo) + '</span><span class="pill desc">−' + fmtPts(descontoDe(r)) + ' pt</span><span class="pill st-' + esc(r.status) + '">' + esc(STATUS[r.status] || '') + '</span>' + (rein ? '<span class="pill rein">Reincidente</span>' : '') + (nv ? '<span class="pill nova">Nova</span>' : '') + '</div>' +
       '<div class="rel">' + esc(r.relato) + '</div>' + acts + '</div></article>';
   }).join('');
 }
 ['#q', '#q-status', '#q-grav'].forEach(function (s) { $(s).addEventListener('input', renderHist); });
 
 function renderRank() {
-  var c = countsByStudent();
+  var c = countsByStudent(), mp = calcularPontos(periodoAtual());
   var arr = Object.keys(c).map(function (k) { return c[k]; }).sort(function (a, b) { return b.total - a.total || b.graves - a.graves || a.nome.localeCompare(b.nome, 'pt-BR'); });
   if (!arr.length) { $('#rank').innerHTML = '<div class="empty"><strong>Sem estudantes no histórico</strong><span>Quando houver registros, esta lista mostra quantas ocorrências cada estudante tem, quantas são graves e quantas seguem abertas.</span></div>'; return; }
-  $('#rank').innerHTML = '<div class="tscroll"><table class="rank"><thead><tr><th>Estudante</th><th>Turma</th><th style="text-align:right">Total</th><th style="text-align:right">Graves</th><th style="text-align:right">Abertas</th><th>Última</th></tr></thead><tbody>' +
+  $('#rank').innerHTML = '<div class="tscroll"><table class="rank"><thead><tr><th>Estudante</th><th>Turma</th><th style="text-align:right">Total</th><th style="text-align:right">Graves</th><th style="text-align:right">Abertas</th><th>Última</th><th style="text-align:right">Pontos</th></tr></thead><tbody>' +
     arr.map(function (e) {
       return '<tr><td><button class="linkish" data-student="' + esc(e.nome) + '">' + esc(e.nome) + '</button>' + (e.total >= 3 ? ' <span class="pill rein">Reincidente</span>' : '') + '</td><td>' + esc(turmaNome(e.turma)) +
-        '</td><td class="n">' + e.total + '</td><td class="n">' + e.graves + '</td><td class="n">' + e.abertas + '</td><td class="n">' + esc(fmtShort(e.ultima)) + '</td></tr>';
+        '</td><td class="n">' + e.total + '</td><td class="n">' + e.graves + '</td><td class="n">' + e.abertas + '</td><td class="n">' + esc(fmtShort(e.ultima)) + '</td><td class="n"><span class="pts ' + classePts(pontosDe(e.k, mp)) + '">' + fmtPts(pontosDe(e.k, mp)) + '</span></td></tr>';
     }).join('') + '</tbody></table></div>';
 }
 
@@ -823,15 +847,130 @@ document.addEventListener('click', function (e) {
   if (d.student) { $('#q').value = d.student; $('#q-status').value = ''; $('#q-grav').value = ''; show('hist'); return; }
 });
 
+// ---------- pontos de comportamento ----------
+// Todo estudante começa o período com 5 pontos. Cada ocorrência desconta, de cada estudante marcado nela,
+// o valor do tipo abaixo (critério combinado com a coordenação). A nota nunca fica abaixo de zero.
+var PONTOS_MAX = 5;
+var DESCONTO = {
+  'Bullying ou intimidação': 5,
+  'Desrespeito a professor ou funcionário': 5,
+  'Agressão física entre estudantes': 2.5,
+  'Agressão verbal entre estudantes': 2.5,
+  'Uso indevido de celular': 1,
+  'Saída de sala sem autorização': 1,
+  'Dano ao patrimônio escolar': 1,
+  'Indisciplina em sala de aula': 0.5,
+  'Outro': 0.5,
+  'Recusa em realizar as atividades': 0.25
+};
+// Períodos de contagem (trimestres da PBH). Para um novo trimestre, basta acrescentar uma linha.
+var PERIODOS = [
+  { id: '2026-3', nome: '3º trimestre de 2026', ini: '2026-09-04', fim: '2026-12-18' }
+];
+function fmtPts(v) { v = Math.round(v * 100) / 100; return (v % 1 === 0 ? v.toFixed(1) : String(v)).replace('.', ','); }
+function descontoDe(r) { var v = DESCONTO[r.tipo]; return v == null ? DESCONTO.Outro : v; }
+function periodoAtual() {
+  var hoje = todayISO(), dentro = PERIODOS.filter(function (p) { return hoje >= p.ini && hoje <= p.fim; })[0];
+  return dentro || PERIODOS.slice().sort(function (a, b) { return b.ini.localeCompare(a.ini); })[0];
+}
+function periodoEscolhido() {
+  var v = $('#p-per').value || lsGet('ocorrencias_periodo') || periodoAtual().id;
+  if (v === 'ano') { var y = todayISO().slice(0, 4); return { id: 'ano', nome: 'Ano de ' + y, ini: y + '-01-01', fim: y + '-12-31' }; }
+  return PERIODOS.filter(function (p) { return p.id === v; })[0] || periodoAtual();
+}
+// chave do estudante -> {pts, desc:[{r, v}]}
+function calcularPontos(per) {
+  var m = {};
+  records.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (r) {
+    if (!r.data || r.data < per.ini || r.data > per.fim) return;
+    var v = descontoDe(r);
+    chavesDe(r).forEach(function (c) {
+      var e = m[c.k] || (m[c.k] = { pts: PONTOS_MAX, desc: [] });
+      e.desc.push({ r: r, v: v }); e.pts = Math.max(0, Math.round((e.pts - v) * 100) / 100);
+    });
+  });
+  return m;
+}
+function pontosDe(k, mapa) { return mapa[k] ? mapa[k].pts : PONTOS_MAX; }
+function classePts(v) { return v >= 4 ? 'ok' : v >= 2.5 ? 'med' : 'baixo'; }
+var ptsAbertos = {}, ptsHora = '';
+function montarFiltrosPts() {
+  var t = $('#p-turma'), atual = t.value || lsGet('ocorrencias_turma_pts') || '';
+  t.innerHTML = TURMAS.map(function (x) { return '<option value="' + esc(x) + '">' + esc(turmaRotulo(x)) + '</option>'; }).join('');
+  if (TURMAS.indexOf(atual) >= 0) t.value = atual;
+  var pe = $('#p-per'), pv = pe.value || lsGet('ocorrencias_periodo') || periodoAtual().id;
+  pe.innerHTML = PERIODOS.map(function (p) { return '<option value="' + p.id + '">' + esc(p.nome) + '</option>'; }).join('') + '<option value="ano">Ano todo</option>';
+  pe.value = pv; if (!pe.value) pe.value = periodoAtual().id;
+}
+function renderPts() {
+  if (!$('#p-turma').options.length) montarFiltrosPts();
+  var turma = $('#p-turma').value, per = periodoEscolhido(), q = norm($('#p-q').value), mapa = calcularPontos(per);
+  $('#p-crit').innerHTML = '<p style="margin:6px 0">Cada estudante começa ' + esc(per.nome.toLowerCase()) + ' com <b>' + PONTOS_MAX + ' pontos</b>. A cada ocorrência registrada, o app desconta sozinho, de cada estudante marcado no registro:</p><ul class="desc-lista" style="color:inherit">' +
+    [[5, 'zera a nota'], [2.5], [1], [0.5], [0.25]].map(function (g) {
+      var tipos = Object.keys(DESCONTO).filter(function (k) { return DESCONTO[k] === g[0]; });
+      return '<li><b>' + (g[1] || 'menos ' + fmtPts(g[0])) + ':</b> ' + esc(tipos.join(', ').replace('Outro', 'outros casos')) + '</li>';
+    }).join('') + '</ul><p class="hint" style="margin:6px 0 0">Os descontos se somam e a nota não fica abaixo de zero. Apagar ou mudar o tipo de uma ocorrência refaz a conta.</p>';
+  if (!turma) { $('#p-tab').innerHTML = '<div class="empty"><strong>Sem turmas</strong><span>As turmas vêm do Corretor EMFAL.</span></div>'; $('#p-sum').innerHTML = ''; return; }
+  var lista = ESTUD.filter(function (e) { return e.turma === turma; });
+  var vistos = {}; lista.forEach(function (e) { vistos[e.id] = 1; });
+  // quem tem ocorrência nesta turma mas saiu do cadastro do Corretor
+  records.forEach(function (r) { chavesDe(r).forEach(function (c) { if (!vistos[c.k] && !ESTPOR[c.k] && String(r.turma || '').split(',').indexOf(turma) >= 0 && mapa[c.k]) { vistos[c.k] = 1; lista.push({ id: c.k, nome: c.nome, turma: turma, fora: true }); } }); });
+  var comDesc = lista.filter(function (e) { return mapa[e.id]; });
+  var media = lista.length ? lista.reduce(function (s, e) { return s + pontosDe(e.id, mapa); }, 0) / lista.length : 0;
+  var zerados = lista.filter(function (e) { return pontosDe(e.id, mapa) === 0; }).length;
+  $('#p-sum').innerHTML = '<span><b>' + lista.length + '</b> estudantes</span><span><b>' + comDesc.length + '</b> com desconto</span><span><b>' + zerados + '</b> com zero</span><span>média <b>' + fmtPts(media) + '</b></span>' +
+    '<span class="ao-vivo">atualizado às ' + esc(ptsHora || new Date().toTimeString().slice(0, 5)) + ', sozinho a cada minuto</span>';
+  if (q) lista = lista.filter(function (e) { return norm(e.nome).indexOf(q) >= 0; });
+  lista.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  if (!lista.length) { $('#p-tab').innerHTML = '<div class="empty"><strong>Nada encontrado</strong><span>Ajuste a busca.</span></div>'; return; }
+  $('#p-tab').innerHTML = '<div class="tscroll"><table class="rank"><thead><tr><th>Estudante</th><th style="text-align:right">Ocorrências</th><th style="text-align:right">Pontos</th></tr></thead><tbody>' +
+    lista.map(function (e) {
+      var d = mapa[e.id], v = pontosDe(e.id, mapa), ab = ptsAbertos[e.id];
+      var det = d && ab ? '<tr><td colspan="3"><ul class="desc-lista">' + d.desc.map(function (x) {
+        return '<li>' + esc(fmtShort(x.r.data)) + ', ' + esc(x.r.tipo) + ': <b>−' + fmtPts(x.v) + '</b></li>';
+      }).join('') + '</ul></td></tr>' : '';
+      return '<tr><td>' + (d ? '<button class="linkish" data-pts="' + esc(e.id) + '">' + esc(e.nome) + '</button>' : esc(e.nome)) + (e.fora ? ' <span class="hint">(fora do cadastro)</span>' : '') +
+        '</td><td class="n">' + (d ? d.desc.length : 0) + '</td><td class="n"><span class="pts ' + classePts(v) + '">' + fmtPts(v) + '</span></td></tr>' + det;
+    }).join('') + '</tbody></table></div><p class="hint" style="margin:4px 0 0">Toque no nome para ver cada desconto.</p>';
+}
+$('#p-turma').addEventListener('change', function () { lsSet('ocorrencias_turma_pts', this.value); renderPts(); });
+$('#p-per').addEventListener('change', function () { lsSet('ocorrencias_periodo', this.value); renderPts(); });
+$('#p-q').addEventListener('input', renderPts);
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('[data-pts]'); if (!t) return;
+  ptsAbertos[t.dataset.pts] = !ptsAbertos[t.dataset.pts]; renderPts();
+});
+// ao vivo: com a aba Comportamento aberta, busca os registros novos a cada minuto
+function atualizarPts() {
+  if (!SESS || view !== 'pts' || document.hidden) return;
+  api('listar').then(function (d) { setDados(d); ptsHora = new Date().toTimeString().slice(0, 5); if (view === 'pts') renderPts(); }).catch(function () {});
+}
+setInterval(atualizarPts, 60000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) atualizarPts(); });
+// no formulário: quanto o tipo escolhido desconta
+function dicaTipo() {
+  var v = DESCONTO[$('#f-tipo').value]; if (v == null) v = DESCONTO.Outro;
+  $('#f-tipo-pts').textContent = v >= PONTOS_MAX ? 'Zera os ' + PONTOS_MAX + ' pontos de comportamento de cada estudante marcado.' : 'Desconta ' + fmtPts(v) + ' ponto' + (v > 1 ? 's' : '') + ' de comportamento de cada estudante marcado.';
+}
+$('#f-tipo').addEventListener('change', dicaTipo);
+dicaTipo();
+// depois de salvar: mostra a pontuação atualizada dos estudantes do registro
+function avisoPontos(ids) {
+  var per = periodoAtual(), mapa = calcularPontos(per);
+  var partes = ids.map(function (id) { var e = ESTPOR[id]; return e ? e.nome.split(' ')[0] + ' ' + fmtPts(pontosDe(id, mapa)) : ''; }).filter(Boolean);
+  if (partes.length) toast('Pontos de comportamento: ' + partes.slice(0, 4).join(', ') + (partes.length > 4 ? '…' : ''));
+}
+
 // ---------- navegação e sessão ----------
 function show(v) {
   view = v;
   fimImpressaoAdv();
-  ['login', 'novo', 'doc', 'hist', 'est', 'adv'].forEach(function (x) { $('#view-' + x).hidden = x !== v; });
+  ['login', 'novo', 'doc', 'hist', 'est', 'adv', 'pts'].forEach(function (x) { $('#view-' + x).hidden = x !== v; });
   $('#tabs').hidden = v === 'login';
   [].forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { b.setAttribute('aria-selected', String(b.dataset.view === v)); });
   if (v === 'hist') renderHist();
   if (v === 'est') renderRank();
+  if (v === 'pts') { montarFiltrosPts(); renderPts(); }
   atualizarAviso();
   topo();
 }
