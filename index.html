@@ -400,7 +400,7 @@ input[type=password]{font:inherit;color:var(--ink);background:var(--bg);border:1
 <script src="https://emfalped-source.github.io/corretor/conta-emfal.js"></script>
 <script>
 'use strict';
-var API_URL = 'https://script.google.com/macros/s/AKfycbxIpFtb_w_yUXQ7pixFZsoAJDxPT9jnye2mW7JvxCoLhpxWx-swCn_HkLrxPrZxbh4qEQ/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzCbPfrmF1AZhXP2xh0Se-mMQUJlWqbTkCZ8doxeNOsn5XHBE-2YMW-M6T4_R3BtBrF/exec';
 var SEM_TOKEN = ['entrar', 'sair', 'situacao'];
 var CHAVE = 'ocorrencias_sessao';
 var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -436,7 +436,7 @@ try { SESS = JSON.parse(lsGet(CHAVE) || 'null'); } catch (e) { SESS = null; }
 function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   if (SEM_TOKEN.indexOf(fn) < 0) args.unshift(SESS ? SESS.token : '');
-  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow' })
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: 'oc.' + fn, args: args }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow' })
     .catch(function () { throw new Error('Sem conexão com a internet. Confira e tente de novo.'); })
     .then(function (r) { if (!r.ok) throw new Error('O servidor não respondeu (erro ' + r.status + '). Tente de novo.'); return r.json(); })
     .then(function (j) {
