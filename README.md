@@ -6,4 +6,4 @@ Registro de ocorrências da coordenação pedagógica da Escola Municipal Franci
 - Turmas e estudantes vêm do Corretor EMFAL.
 - Os registros ficam numa planilha do Google Drive da coordenação, nunca neste repositório.
 
-Endereço: https://emfalpbh.github.io/ocorrencias/
+Endereço: https://emfalped-source.github.io/ocorrencias/
